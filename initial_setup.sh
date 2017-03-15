@@ -7,6 +7,7 @@ RED='\033[0;41;30m'
 STD='\033[0;0;39m'
 
 PITYPE="0"
+AVRDUDE="FALSE"
 SCRIPTDIR="$(dirname "${BASH_SOURCE[0]}")"
 
 # ----------------------------------
@@ -40,9 +41,9 @@ choosePi() {
   select option in "Pi 2" "Pi 3" "Quit"
   do
     case $option in
-      "Pi 2") 
+      "Pi 2")
         PITYPE="2" && break;;
-      "Pi 3") 
+      "Pi 3")
         PITYPE="3" && break;;
       Quit)
         exit 0;;
@@ -62,9 +63,9 @@ fi
 # ttyAMA0 => bluetooth on the Pi3, we need a real uart for the cnc hat to work reliably.
 # See the link below if you want to know more.
 # http://spellfoundry.com/2016/05/29/configuring-gpio-serial-port-raspbian-jessie-including-pi-3/
-pi3Setup() {    
+pi3Setup() {
   clear
-  echo " Setting up /dev/ttyAMA0 for GPIO serial config..."   
+  echo " Setting up /dev/ttyAMA0 for GPIO serial config..."
   #echo 'dtoverlay=pi3-miniuart-bt' >> /boot/config.txt"
   #echo 'enable_uart=1' >> /boot/config.txt"
   #systemctl disable hciuart
@@ -91,9 +92,9 @@ pi3Explain() {
   select option in "Yes" "No"
   do
     case $option in
-      "Yes") 
+      "Yes")
         break;;
-      "No") 
+      "No")
         exit 0;;
      esac
   done
@@ -111,10 +112,13 @@ kernMsgDisable() {
 ttyPermissions() {
   clear
   echo " Updating uDev rules for tty permissions..."
-  echo '# /etc/udev/rules.d/99-my-com.rules' > /etc/udev/rules.d/99-user-com.rules 
-  echo '# These rules make the ttys accesable to the standard user, no sudo required' > /etc/udev/rules.d/99-user-com.rules 
-  echo 'SUBSYSTEM=="tty", KERNEL=="ttyS0", GROUP:="users", MODE="0660"' > /etc/udev/rules.d/99-user-com.rules 
-  echo 'SUBSYSTEM=="tty", KERNEL=="ttyAMA0", GROUP:="users", MODE="0660"' > /etc/udev/rules.d/99-user-com.rules 
+  rm -f /etc/udev/rules.d/99-user-com.rules
+  echo '# /etc/udev/rules.d/99-my-com.rules' >> /etc/udev/rules.d/99-user-com.rules
+  echo '# These rules make the ttys accesable to the standard user, no sudo required' >> /etc/udev/rules.d/99-user-com.rules
+  echo "" >> /etc/udev/rules.d/99-user-com.rules
+  echo 'SUBSYSTEM=="tty", KERNEL=="ttyS0", GROUP:="users", MODE="0660"' >> /etc/udev/rules.d/99-user-com.rules
+  echo 'SUBSYSTEM=="tty", KERNEL=="ttyAMA0", GROUP:="users", MODE="0660"' >> /etc/udev/rules.d/99-user-com.rules
+  pause
 }
 
 explainAvrdude() {
@@ -135,9 +139,9 @@ explainAvrdude() {
   select option in "Install" "Skip"
   do
     case $option in
-      "Install") 
-        $AVRDUDE="TRUE";;
-      "Skip") 
+      "Install")
+        AVRDUDE="TRUE" && break;;
+      "Skip")
         break;;
      esac
   done
@@ -146,20 +150,21 @@ explainAvrdude() {
 installAvrdude() {
   clear
   echo " Installing avrdude and scripts..."
-  #mkdir /usr/local/share/avrdude-rpi
-  #cp "$SCRIPTDIR"/avrdude-rpi/autoreset2560 /usr/local/share/avrdude-rpi/autoreset2560
-  #cp "$SCRIPTDIR"/avrdude-rpi/autoreset328 /usr/local/share/avrdude-rpi/autoreset328
-  #cp "$SCRIPTDIR"/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude-autoreset
-  #cp "$SCRIPTDIR"/avrdude-rpi/avrdude-original /usr/local/share/avrdude-rpi/avrdude-original
-  #cp "$SCRIPTDIR"/avrdude-rpi/avrdude.conf /usr/local/share/avrdude-rpi/avrdude.conf
-  #ln -s /usr/local/share/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude
+  mkdir /usr/local/share/avrdude-rpi
+  cp "$SCRIPTDIR"/avrdude-rpi/autoreset2560 /usr/local/share/avrdude-rpi/autoreset2560
+  cp "$SCRIPTDIR"/avrdude-rpi/autoreset328 /usr/local/share/avrdude-rpi/autoreset328
+  cp "$SCRIPTDIR"/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude-autoreset
+  cp "$SCRIPTDIR"/avrdude-rpi/avrdude-original /usr/local/share/avrdude-rpi/avrdude-original
+  cp "$SCRIPTDIR"/avrdude-rpi/avrdude.conf /usr/local/share/avrdude-rpi/avrdude.conf
+  ln -s /usr/local/share/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude
 
-  #chmod +x /usr/local/share/avrdude-rpi/avrdude
-  #chmod +x /usr/local/share/avrdude-rpi/autoreset328
-  #chmod +x /usr/local/share/avrdude-rpi/autoreset2560
+  chmod +x /usr/local/share/avrdude-rpi/avrdude
+  chmod +x /usr/local/share/avrdude-rpi/autoreset328
+  chmod +x /usr/local/share/avrdude-rpi/autoreset2560
+  chmod +x /usr/local/share/avrdude-rpi/avrdude-original
 
   # Make AVRDUDE available for all
-  #sudo ln -s -T /usr/local/share/avrdude-rpi/avrdude /usr/local/bin/avrdude-rpi
+  sudo ln -s -T /usr/local/share/avrdude-rpi/avrdude /usr/local/bin/avrdude-rpi
   pause
 }
 
@@ -171,9 +176,9 @@ updateFW() {
   select option in "Yes" "No"
   do
     case $option in
-      "Yes") 
-          avrdude-rpi -v -C /usr/local/share/avrdude-rpi/avrdude.conf -p atmega328p -P /dev/ttyAMA0 -b 115200 -c arduino -D Uflash:w:"$SCRIPTDIR"/GRBL-FW/grbl_v1.1f.20170131.hex;;:i
-      "No") 
+      "Yes")
+          avrdude-rpi -v -C /usr/local/share/avrdude-rpi/avrdude.conf -p atmega328p -P /dev/ttyAMA0 -b 115200 -c arduino -D Uflash:w:"$SCRIPTDIR"/GRBL-FW/grbl_v1.1f.20170131.hex:i;;
+      "No")
         break;;
      esac
   done
@@ -191,10 +196,12 @@ updateSystem() {
 installNVM() {
   clear
   echo " Install Node Version Manager (NVM)..."
-  #wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.1/install.sh | NVM_DIR=/usr/local/share/nvm bash
-  #source ~/.bashrc
-  #nvm install node
-  #pause  
+  wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.1/install.sh | NVM_DIR=/usr/local/share/nvm bash
+  echo 'export NVM_DIR="/usr/local/share/nvm"' >> /home/pi/.bashrc
+  echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" # This loads nvm'  >> /home/pi/.bashrc
+  source ~/.bashrc
+  nvm install node
+  pause
 }
 
 installLW4() {
@@ -211,13 +218,13 @@ restart() {
   clear
   echo " Restart required to finilize instilation."
   pause
-  #shutdown -r now
+  shutdown -r now
 }
 # ----------------------------------------------
 # Step #3: Trap CTRL+C, CTRL+Z and quit singles
 # ----------------------------------------------
 #trap '' SIGINT SIGQUIT SIGTSTP
- 
+
 # -----------------------------------
 # Step #4: Main logic - infinite loop
 # ------------------------------------
@@ -225,7 +232,7 @@ while true
 do
   checkPermissions
 
-  # System setup  
+  # System setup
   choosePi
   if [ "$PITYPE" = "3" ]; then
     pi3Explain
@@ -240,7 +247,7 @@ do
     installAvrdude
     updateFW
   fi
-  
+
   # Install utils
   updateSystem
   installNVM
