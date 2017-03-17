@@ -29,10 +29,6 @@ TTY=${1:-/dev/ttyAMA0}
 HEADLESS=${2:-FALSE}
 
 initMenu() {
-if [ "$HEADLESS" != "FALSE" ]; then
-  echo " Started in headless mode..."
-  return
-fi
   clear
   echo "--------------------------------------------------------------------------------"
   echo "                          LaserWeb4 - Pi Launcher "
@@ -78,8 +74,13 @@ startApp() {
   npm run-script start-app &
 }
 
+# Main program loop
 while true
 do
+  if [ "$HEADLESS" != "FALSE" ]; then
+    startServer
+  fi
+  
   initMenu
   
   exit 0
