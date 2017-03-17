@@ -123,7 +123,7 @@ updateSystem() {
 }
 
 installNVM() {
-  clear
+  echo ""
   echo " Install Node Version Manager (NVM)?"
   echo ""
   select option in "Yes" "No"
@@ -144,7 +144,7 @@ installNVM() {
 }
 
 installLW4() {
-  clear
+  echo ""
   echo " Install LaserWeb4?"
   echo ""
   select option in "Yes" "No"
@@ -160,6 +160,7 @@ installLW4() {
   pushd /home/pi/LaserWeb4
   npm run-script installdev
   popd
+  cp start_server.sh
   pause
 }
 
@@ -167,6 +168,7 @@ finalMessage() {
   echo ""
   echo " Done! You will need to log out and back in or 'source ~/.bashrc'"
   echo " before you can use node"
+  exec source ~/.bashrc
 }
 
 # ----------------------------------------------
