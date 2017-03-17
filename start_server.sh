@@ -20,7 +20,9 @@
 # CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 # Useage:
+#   ./start_server.sh
 #   ./start_server.sh /dev/YOUR-TTY
+#   ./start_server.sh /dev/YOUR-TTY HEADLESS
 
 # Setup the default serial device
 TTY=${1:-/dev/ttyAMA0}
@@ -33,8 +35,11 @@ if [ "$HEADLESS" != "FALSE" ]; then
 fi
   clear
   echo "--------------------------------------------------------------------------------"
-  echo "                          LaserWeb4 - Quick Start "
+  echo "                          LaserWeb4 - Pi Launcher "
   echo "--------------------------------------------------------------------------------"
+  echo ""
+  echo " Monitoring tty: $TTY"
+  echo ""
   select option in "Server & App" "Server Only" "Exit"
   do
     case $option in
@@ -64,10 +69,18 @@ startServer() {
   while true
   do
     tail -f /tmp/lw.stdout.log | grep -q --line-buffered "INFO: Connecting to USB,$TTY" && trigger
+    sleep 2
   done
 }
 
 startApp() {
   echo "Starting LaserWeb4 web app..."
-  exec npm run-script start-app
+  npm run-script start-app &
 }
+
+while true
+do
+  initMenu
+  
+  exit 0
+done

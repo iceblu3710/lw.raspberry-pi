@@ -160,7 +160,7 @@ installLW4() {
   pushd /home/pi/LaserWeb4
   npm run-script installdev
   popd
-  cp start_server.sh
+  cp start_server.sh /home/pi/LaserWeb4 
   pause
 }
 
@@ -168,7 +168,6 @@ finalMessage() {
   echo ""
   echo " Done! You will need to log out and back in or 'source ~/.bashrc'"
   echo " before you can use node"
-  exec source ~/.bashrc
 }
 
 # ----------------------------------------------
