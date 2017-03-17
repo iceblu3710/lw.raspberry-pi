@@ -37,9 +37,11 @@ choosePi() {
   echo ""
   echo " Which kind of Pi do you have?"
   echo ""
-  select option in "Pi 2" "Pi 3" "Quit"
+  select option in "Pi 1" "Pi 2" "Pi 3" "Quit"
   do
     case $option in
+      "Pi 1")
+        PITYPE="1" && break;;
       "Pi 2")
         PITYPE="2" && break;;
       "Pi 3")
@@ -66,8 +68,8 @@ pi3Setup() {
   echo ""
   echo " Setting up /dev/ttyAMA0 for GPIO serial config..."
   backUp "/boot/config.txt"
-  echo 'dtoverlay=pi3-miniuart-bt' >> /boot/config.txt"
-  echo 'enable_uart=1' >> /boot/config.txt"
+  echo 'dtoverlay=pi3-miniuart-bt' >> /boot/config.txt
+  echo 'enable_uart=1' >> /boot/config.txt
   systemctl disable hciuart
   systemctl stop serial-getty@ttyS0.service
   systemctl disable serial-getty@ttyS0.service
@@ -104,8 +106,8 @@ pi3Explain() {
 kernMsgDisable() {
   echo ""
   echo " Disabling kernel console messages..."
-  #backUp "/boot/cmdline.txt"
-  #sed -i 's/ console=[^ ]*//' /boot/cmdline.txt
+  backUp "/boot/cmdline.txt"
+  sed -i 's/ console=[^ ]*//' /boot/cmdline.txt
   pause
 }
 
@@ -118,101 +120,6 @@ ttyPermissions() {
   echo "" >> /etc/udev/rules.d/99-user-com.rules
   echo 'SUBSYSTEM=="tty", KERNEL=="ttyS0", GROUP:="users", MODE="0660"' >> /etc/udev/rules.d/99-user-com.rules
   echo 'SUBSYSTEM=="tty", KERNEL=="ttyAMA0", GROUP:="users", MODE="0660"' >> /etc/udev/rules.d/99-user-com.rules
-  pause
-}
-
-explainAvrdude() {
-  clear
-  echo "--------------------------------------------------------------------------------"
-  echo "                            Pi CNC Hat - Avrdude"
-  echo "--------------------------------------------------------------------------------"
-  echo ""
-  echo " If you are running a CNC hat with an Arduino connected directly to the GPIO"
-  echo " then you will need to use a modified avedude script to toggle the DTR (Pin11)"
-  echo " "
-  echo " Avrdude is from:"
-  echo " http://savannah.nongnu.org/projects/avrdude/"
-  echo " Licensed under GNU GPL v2"
-  echo ""
-  echo " If you are using a CNC hat then agree, otherwise you can skip this step."
-  echo ""
-  select option in "Install" "Skip"
-  do
-    case $option in
-      "Install")
-        AVRDUDE="TRUE" && break;;
-      "Skip")
-        break;;
-     esac
-  done
-}
-
-installAvrdude() {
-  echo ""
-  echo " Installing avrdude and scripts..."
-  mkdir /usr/local/share/avrdude-rpi
-  cp "$SCRIPTDIR"/avrdude-rpi/autoreset2560 /usr/local/share/avrdude-rpi/autoreset2560
-  cp "$SCRIPTDIR"/avrdude-rpi/autoreset328 /usr/local/share/avrdude-rpi/autoreset328
-  cp "$SCRIPTDIR"/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude-autoreset
-  cp "$SCRIPTDIR"/avrdude-rpi/avrdude-original /usr/local/share/avrdude-rpi/avrdude-original
-  cp "$SCRIPTDIR"/avrdude-rpi/avrdude.conf /usr/local/share/avrdude-rpi/avrdude.conf
-  ln -s /usr/local/share/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude
-
-  chmod +x /usr/local/share/avrdude-rpi/avrdude
-  chmod +x /usr/local/share/avrdude-rpi/autoreset328
-  chmod +x /usr/local/share/avrdude-rpi/autoreset2560
-  chmod +x /usr/local/share/avrdude-rpi/avrdude-original
-
-  # Make AVRDUDE available for all
-  sudo ln -s -T /usr/local/share/avrdude-rpi/avrdude /usr/local/bin/avrdude-rpi
-  pause
-}
-
-updateFW() {
-  echo ""
-  echo " As you installed the Pi CNC hat avrdude would you like to upgrade your"
-  echo " firmware to GRBL v1.1f? (Your settings will remain in EEPROM)"
-  echo ""
-  select option in "Yes" "No"
-  do
-    case $option in
-      "Yes")
-          avrdude-rpi -v -C /usr/local/share/avrdude-rpi/avrdude.conf -p atmega328p -P /dev/ttyAMA0 -b 115200 -c arduino -D Uflash:w:"$SCRIPTDIR"/GRBL-FW/grbl_v1.1f.20170131.hex:i;;
-      "No")
-        break;;
-     esac
-  done
-  pause
-}
-
-updateSystem() {
-  echo ""
-  echo " Updating and installing required programs..."
-  apt-get update
-  apt-get install git
-  pause
-}
-
-installNVM() {
-  clear
-  echo " Install Node Version Manager (NVM)..."
-  echo ""
-  wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.1/install.sh | NVM_DIR=/usr/local/share/nvm bash
-  echo 'export NVM_DIR="/usr/local/share/nvm"' >> /home/pi/.bashrc
-  echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" # This loads nvm'  >> /home/pi/.bashrc
-  source ~/.bashrc
-  nvm install node
-  pause
-}
-
-installLW4() {
-  clear
-  echo " Installing LaserWeb4..."
-  echo ""
-  git clone https://github.com/iceblu3710/LaserWeb4.git /home/pi/LaserWeb4
-  pushd /home/pi/LaserWeb4
-  npm run-script installdev
-  popd
   pause
 }
 
@@ -243,18 +150,6 @@ do
   fi
   kernMsgDisable
   ttyPermissions
-
-  # Programs
-  explainAvrdude
-  if [ "$AVRDUDE" = "TRUE" ]; then
-    installAvrdude
-    updateFW
-  fi
-
-  # Install utils
-  updateSystem
-  installNVM
-  installLW4
 
   restart
   exit 0
