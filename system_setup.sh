@@ -69,17 +69,17 @@ installAvrdude() {
   echo ""
   echo " Installing avrdude and scripts..."
   mkdir /usr/local/share/avrdude-rpi
-  cp "$SCRIPTDIR"/avrdude-rpi/autoreset2560 /usr/local/share/avrdude-rpi/autoreset2560
-  cp "$SCRIPTDIR"/avrdude-rpi/autoreset328 /usr/local/share/avrdude-rpi/autoreset328
-  cp "$SCRIPTDIR"/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude-autoreset
-  cp "$SCRIPTDIR"/avrdude-rpi/avrdude-original /usr/local/share/avrdude-rpi/avrdude-original
-  cp "$SCRIPTDIR"/avrdude-rpi/avrdude.conf /usr/local/share/avrdude-rpi/avrdude.conf
-  ln -s /usr/local/share/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude
+  sudo cp "$SCRIPTDIR"/avrdude-rpi/autoreset2560 /usr/local/share/avrdude-rpi/autoreset2560
+  sudo cp "$SCRIPTDIR"/avrdude-rpi/autoreset328 /usr/local/share/avrdude-rpi/autoreset328
+  sudo cp "$SCRIPTDIR"/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude-autoreset
+  sudo cp "$SCRIPTDIR"/avrdude-rpi/avrdude-original /usr/local/share/avrdude-rpi/avrdude-original
+  sudo cp "$SCRIPTDIR"/avrdude-rpi/avrdude.conf /usr/local/share/avrdude-rpi/avrdude.conf
+  sudo ln -s /usr/local/share/avrdude-rpi/avrdude-autoreset /usr/local/share/avrdude-rpi/avrdude
 
-  chmod +x /usr/local/share/avrdude-rpi/avrdude
-  chmod +x /usr/local/share/avrdude-rpi/autoreset328
-  chmod +x /usr/local/share/avrdude-rpi/autoreset2560
-  chmod +x /usr/local/share/avrdude-rpi/avrdude-original
+  sudo chmod +x /usr/local/share/avrdude-rpi/avrdude
+  sudo chmod +x /usr/local/share/avrdude-rpi/autoreset328
+  sudo chmod +x /usr/local/share/avrdude-rpi/autoreset2560
+  sudo chmod +x /usr/local/share/avrdude-rpi/avrdude-original
 
   # Make AVRDUDE available for all
   sudo ln -s -T /usr/local/share/avrdude-rpi/avrdude /usr/local/bin/avrdude-rpi
@@ -106,16 +106,35 @@ updateFW() {
 
 updateSystem() {
   echo ""
-  echo " Updating and installing required programs..."
-  apt-get update
-  apt-get install git
+  echo " Update and install required programs? (git)"
+  echo ""
+  select option in "Yes" "No"
+  do
+    case $option in
+      "Yes")
+        break;;
+      "No")
+        return;;
+     esac
+  done
+  sudo apt-get update
+  sudo apt-get install git
   pause
 }
 
 installNVM() {
   clear
-  echo " Install Node Version Manager (NVM)..."
+  echo " Install Node Version Manager (NVM)?"
   echo ""
+  select option in "Yes" "No"
+  do
+    case $option in
+      "Yes")
+        break;;
+      "No")
+        return;;
+     esac
+  done
   wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.1/install.sh | NVM_DIR=/usr/local/share/nvm bash
   echo 'export NVM_DIR="/usr/local/share/nvm"' >> /home/pi/.bashrc
   echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" # This loads nvm'  >> /home/pi/.bashrc
@@ -126,22 +145,30 @@ installNVM() {
 
 installLW4() {
   clear
-  echo " Installing LaserWeb4..."
+  echo " Install LaserWeb4?"
   echo ""
-  git clone https://github.com/iceblu3710/LaserWeb4.git /home/pi/LaserWeb4
+  select option in "Yes" "No"
+  do
+    case $option in
+      "Yes")
+        break;;
+      "No")
+        return;;
+     esac
+  done
+  git clone https://github.com/LaserWeb/LaserWeb4.git /home/pi/LaserWeb4
   pushd /home/pi/LaserWeb4
   npm run-script installdev
   popd
   pause
 }
 
-restart() {
-  clear
+finalMessage() {
   echo ""
-  echo " Restart required to finilize instilation."
-  pause
-  shutdown -r now
+  echo " Done! You will need to log out and back in or 'source ~/.bashrc'"
+  echo " before you can use node"
 }
+
 # ----------------------------------------------
 # Step #3: Trap CTRL+C, CTRL+Z and quit singles
 # ----------------------------------------------
@@ -152,7 +179,7 @@ restart() {
 # ------------------------------------
 while true
 do
-  checkPermissions
+  #checkPermissions
 
   # Programs
   explainAvrdude
@@ -166,6 +193,5 @@ do
   installNVM
   installLW4
 
-  restart
   exit 0
 done
