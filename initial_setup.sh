@@ -20,7 +20,6 @@ pause(){
 
 function backUp() {
   echo ""
-  echo ""
   echo " Backing up "${1}"..."
   echo ""
   DIR=`dirname "${1}"`
@@ -53,7 +52,7 @@ choosePi() {
 
 # We need sudo permissions for some things. Explain and ask for it
 checkPermissions() {
-  clear
+  echo ""
   if [[ $EUID -ne 0 ]]; then
    echo " This script must be run as root, use sudo "$0" instead" 1>&2
    exit 1
@@ -64,13 +63,14 @@ fi
 # See the link below if you want to know more.
 # http://spellfoundry.com/2016/05/29/configuring-gpio-serial-port-raspbian-jessie-including-pi-3/
 pi3Setup() {
-  clear
+  echo ""
   echo " Setting up /dev/ttyAMA0 for GPIO serial config..."
-  #echo 'dtoverlay=pi3-miniuart-bt' >> /boot/config.txt"
-  #echo 'enable_uart=1' >> /boot/config.txt"
-  #systemctl disable hciuart
-  #systemctl stop serial-getty@ttyS0.service
-  #systemctl disable serial-getty@ttyS0.service
+  backUp "/boot/config.txt"
+  echo 'dtoverlay=pi3-miniuart-bt' >> /boot/config.txt"
+  echo 'enable_uart=1' >> /boot/config.txt"
+  systemctl disable hciuart
+  systemctl stop serial-getty@ttyS0.service
+  systemctl disable serial-getty@ttyS0.service
   pause
 }
 
@@ -102,7 +102,7 @@ pi3Explain() {
 
 # Stop the console from outputting ot hardware serial pins
 kernMsgDisable() {
-  clear
+  echo ""
   echo " Disabling kernel console messages..."
   #backUp "/boot/cmdline.txt"
   #sed -i 's/ console=[^ ]*//' /boot/cmdline.txt
@@ -110,7 +110,7 @@ kernMsgDisable() {
 }
 
 ttyPermissions() {
-  clear
+  echo ""
   echo " Updating uDev rules for tty permissions..."
   rm -f /etc/udev/rules.d/99-user-com.rules
   echo '# /etc/udev/rules.d/99-my-com.rules' >> /etc/udev/rules.d/99-user-com.rules
@@ -148,7 +148,7 @@ explainAvrdude() {
 }
 
 installAvrdude() {
-  clear
+  echo ""
   echo " Installing avrdude and scripts..."
   mkdir /usr/local/share/avrdude-rpi
   cp "$SCRIPTDIR"/avrdude-rpi/autoreset2560 /usr/local/share/avrdude-rpi/autoreset2560
@@ -169,7 +169,7 @@ installAvrdude() {
 }
 
 updateFW() {
-  clear
+  echo ""
   echo " As you installed the Pi CNC hat avrdude would you like to upgrade your"
   echo " firmware to GRBL v1.1f? (Your settings will remain in EEPROM)"
   echo ""
@@ -186,7 +186,7 @@ updateFW() {
 }
 
 updateSystem() {
-  clear
+  echo ""
   echo " Updating and installing required programs..."
   apt-get update
   apt-get install git
@@ -196,6 +196,7 @@ updateSystem() {
 installNVM() {
   clear
   echo " Install Node Version Manager (NVM)..."
+  echo ""
   wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.1/install.sh | NVM_DIR=/usr/local/share/nvm bash
   echo 'export NVM_DIR="/usr/local/share/nvm"' >> /home/pi/.bashrc
   echo '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh" # This loads nvm'  >> /home/pi/.bashrc
@@ -207,6 +208,7 @@ installNVM() {
 installLW4() {
   clear
   echo " Installing LaserWeb4..."
+  echo ""
   git clone https://github.com/iceblu3710/LaserWeb4.git /home/pi/LaserWeb4
   pushd /home/pi/LaserWeb4
   npm run-script installdev
@@ -216,6 +218,7 @@ installLW4() {
 
 restart() {
   clear
+  echo ""
   echo " Restart required to finilize instilation."
   pause
   shutdown -r now
