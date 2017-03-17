@@ -16,6 +16,7 @@ SCRIPTDIR="$(dirname "${BASH_SOURCE[0]}")"
 pause(){
   echo ""
   read -p " Press [Enter] key to continue..." fackEnterKey
+  echo ""
 }
 
 function backUp() {

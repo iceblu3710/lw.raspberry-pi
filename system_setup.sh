@@ -16,6 +16,7 @@ SCRIPTDIR="$(dirname "${BASH_SOURCE[0]}")"
 pause(){
   echo ""
   read -p " Press [Enter] key to continue..." fackEnterKey
+  echo ""
 }
 
 function backUp() {
@@ -94,7 +95,8 @@ updateFW() {
   do
     case $option in
       "Yes")
-          avrdude-rpi -v -C /usr/local/share/avrdude-rpi/avrdude.conf -p atmega328p -P /dev/ttyAMA0 -b 115200 -c arduino -D Uflash:w:"$SCRIPTDIR"/GRBL-FW/grbl_v1.1f.20170131.hex:i;;
+          avrdude-rpi -v -C /usr/local/share/avrdude-rpi/avrdude.conf -p atmega328p -P /dev/ttyAMA0 -b 115200 -c arduino -D Uflash:w:"$SCRIPTDIR"/GRBL-FW/grbl_v1.1f.20170131.hex:i
+          break;;
       "No")
         break;;
      esac
