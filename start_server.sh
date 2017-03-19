@@ -48,14 +48,14 @@ initMenu() {
         startServer
         break;;
       "Exit")
-        exit 0;;     
+        exit 0;;
      esac
   done
 }
 
 function trigger {
   echo "Firing reset trigger to $TTY !"
-  echo -n $'\cx' > $TTY 
+  echo -n $'\cx' > $TTY
 }
 
 startServer() {
@@ -80,8 +80,8 @@ do
   if [ "$HEADLESS" != "FALSE" ]; then
     startServer
   fi
-  
+
   initMenu
-  
+
   exit 0
 done
