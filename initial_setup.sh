@@ -13,123 +13,125 @@ SCRIPTDIR="$(dirname "${BASH_SOURCE[0]}")"
 # ----------------------------------
 # Step #2: User defined function
 # ----------------------------------
-pause(){
-  echo ""
-  read -p " Press [Enter] key to continue..." fackEnterKey
-  echo ""
-}
 
-function backUp() {
-  echo ""
-  echo " Backing up "${1}"..."
-  echo ""
+backUp() {
   DIR=`dirname "${1}"`
   #pushd "${DIR}"
   cp "${1}" "${1}"-`date +%Y%m%d%H%M`.backup
   #popd
-  pause
 }
 
 choosePi() {
-  clear
-  echo "--------------------------------------------------------------------------------"
-  echo "                        Raspberry Pi - LaserWeb4 Installer "
-  echo "--------------------------------------------------------------------------------"
-  echo ""
-  echo " Which kind of Pi do you have?"
-  echo ""
-  select option in "Pi 1" "Pi 2" "Pi 3" "Quit"
-  do
-    case $option in
-      "Pi 1")
-        PITYPE="1" && break;;
-      "Pi 2")
-        PITYPE="2" && break;;
-      "Pi 3")
-        PITYPE="3" && break;;
-      Quit)
-        exit 0;;
-     esac
-  done
+  CHOICE=$(whiptail --title "Raspberry Pi - LaserWeb4 Installer" --menu "Which kind of Pi do you have?" 30 78 5 \
+"1)" "Raspberry Pi 1 - Model A/B" \
+"2)" "Raspberry Pi 2 - Model B+/B+" \
+"3)" "Raspberry Pi 3" \
+"4)" "Compute Module" \
+"5)" "Zero" 3>&2 2>&1 1>&3)
+
+  case $CHOICE in
+    "3)")
+      PITYPE="3";;
+    *)
+      return;;
+  esac
 }
 
 # We need sudo permissions for some things. Explain and ask for it
 checkPermissions() {
-  echo ""
-  if [[ $EUID -ne 0 ]]; then
-   echo " This script must be run as root, use sudo "$0" instead" 1>&2
-   exit 1
-fi
+  #Password Input
+  PSW=$(whiptail --title "Sudo Required" --passwordbox "Enter your sudo password and choose Ok to continue." 10 60 3>&1 1>&2 2>&3)
+  exitstatus=$?
+  if [ $exitstatus = 0 ]; then
+    #sudo -S <<< $PSW script.sh
+    return
+  else
+    whiptail --title "Cancel" --msgbox "This script requires sudo permissions to install some programs." 10 60
+    exit 1
+  fi
 }
+
+progressBar() {
+  declare TODO=("${@}")
+  TITLE=("$TODO")
+  NUM_TODO=${#TODO[*]}
+  STEP=$((100/(NUM_TODO-1)))
+  IDX=1
+  COUNTER=0
+  (
+  while :
+  do
+    cat <<EOF
+XXX
+$COUNTER
+${TODO[$IDX]}
+XXX
+EOF
+    COMMAND="${TODO[$IDX]}"
+    [[ $IDX -lt $NUM_TODO ]] && $COMMAND
+    (( IDX+=1 ))
+    (( COUNTER+=STEP ))
+    [ $COUNTER -gt 100 ] && break
+    sleep 1
+  done
+  ) |
+  whiptail --title "${TITLE}" --gauge "Please wait..." 6 70 0
+}
+
 
 # ttyAMA0 => bluetooth on the Pi3, we need a real uart for the cnc hat to work reliably.
 # See the link below if you want to know more.
 # http://spellfoundry.com/2016/05/29/configuring-gpio-serial-port-raspbian-jessie-including-pi-3/
 pi3Setup() {
-  echo ""
-  echo " Setting up /dev/ttyAMA0 for GPIO serial config..."
-  backUp "/boot/config.txt"
-  echo 'dtoverlay=pi3-miniuart-bt' >> /boot/config.txt
-  echo 'enable_uart=1' >> /boot/config.txt
-  systemctl disable hciuart
-  systemctl stop serial-getty@ttyS0.service
-  systemctl disable serial-getty@ttyS0.service
-  pause
+  progressBar "Setup Pi3's Serial Ports"\
+    "sudo cp /boot/config.txt /boot/config.txt-`date +%Y%m%d%H%M`.backup"\
+    "sudo echo 'dtoverlay=pi3-miniuart-bt' >> /boot/config.txt"\
+    "sudo echo 'enable_uart=1' >> /boot/config.txt"\
+    "sudo systemctl disable hciuart >/dev/null 2>&1"\
+    "sudo systemctl stop serial-getty@ttyS0.service >/dev/null 2>&1"\
+    "sudo systemctl disable serial-getty@ttyS0.service >/dev/null 2>&1"
 }
 
 pi3Explain() {
-  clear
-  echo "--------------------------------------------------------------------------------"
-  echo "                                  DISCLAIMER"
-  echo "--------------------------------------------------------------------------------"
-  echo ""
-  echo " Pi3 specific system changes:"
-  echo ""
-  echo " Out of the box ttyS0 => bluetooth via the hardware uart and ttyAMA0 => GPIO"
-  echo " using softwareSerial. We need high speed, reliable comms with the CNC hat or"
-  echo " gcodes will be dropped. If you have modified your system and require high speed"
-  echo " bluetooth then stop now and do some research. More info at:"
-  echo ""
-  echo " http://spellfoundry.com/2016/05/29/configuring-gpio-serial-port-raspbian-jessie-including-pi-3/"
-  echo ""
-  select option in "Yes" "No"
-  do
-    case $option in
-      "Yes")
-        break;;
-      "No")
-        exit 0;;
-     esac
-  done
+  MSG="Pi3 specific system changes:
+
+Out of the box ttyS0 => bluetooth via the hardware uart and
+ttyAMA0 => GPIO using softwareSerial. We need high speed,
+reliable comms with the CNC hat or gcodes may be dropped.
+If you have modified your system and require high speed
+bluetooth then stop now and do some research. More info at:
+
+http://spellfoundry.com/2016/05/29/configuring-gpio-serial-port-raspbian-jessie-including-pi-3"
+  if (whiptail --title "DISCLAIMER" --yesno "$MSG" 25 78) then
+    return
+  else
+    exit -1
+  fi
 }
 
 # Stop the console from outputting ot hardware serial pins
 kernMsgDisable() {
-  echo ""
-  echo " Disabling kernel console messages..."
-  backUp "/boot/cmdline.txt"
-  sed -i 's/ console=[^ ]*//' /boot/cmdline.txt
-  pause
+  progressBar "Disabling kernel console messages"\
+  "sudo cp /boot/cmdline.txt /boot/cmdline.txt-`date +%Y%m%d%H%M`.backup"\
+  "sudo sed -i 's/ console=[^ ]*//' /boot/cmdline.txt"
 }
 
 ttyPermissions() {
-  echo ""
-  echo " Updating uDev rules for tty permissions..."
-  rm -f /etc/udev/rules.d/99-user-com.rules
-  echo '# /etc/udev/rules.d/99-my-com.rules' >> /etc/udev/rules.d/99-user-com.rules
-  echo '# These rules make the ttys accesable to the standard user, no sudo required' >> /etc/udev/rules.d/99-user-com.rules
-  echo "" >> /etc/udev/rules.d/99-user-com.rules
-  echo 'SUBSYSTEM=="tty", KERNEL=="ttyS0", GROUP:="users", MODE="0660"' >> /etc/udev/rules.d/99-user-com.rules
-  echo 'SUBSYSTEM=="tty", KERNEL=="ttyAMA0", GROUP:="users", MODE="0660"' >> /etc/udev/rules.d/99-user-com.rules
-  pause
+  progressBar "Updating uDev rules for tty permissions"\
+  "rm -f /etc/udev/rules.d/99-user-com.rules"\
+  "echo '# /etc/udev/rules.d/99-my-com.rules' >> /etc/udev/rules.d/99-user-com.rules"\
+  "echo '# These rules make the ttys accesable to the standard user, no sudo required' >> /etc/udev/rules.d/99-user-com.rules"\
+  "echo "" >> /etc/udev/rules.d/99-user-com.rules"\
+  "echo 'SUBSYSTEM=="tty", KERNEL=="ttyS0", GROUP:="users", MODE="0660"' >> /etc/udev/rules.d/99-user-com.rules"\
+  "echo 'SUBSYSTEM=="tty", KERNEL=="ttyAMA0", GROUP:="users", MODE="0660"' >> /etc/udev/rules.d/99-user-com.rules"
 }
 
 restart() {
-  clear
-  echo ""
-  echo " Restart required to finilize instilation."
-  pause
-  shutdown -r now
+  if(whiptail --title "Setup Complete" --yesno "Restart required to finilize instilation, Reboot now?" 8 78) then
+    shutdown -r now
+  else
+    exit 0
+  fi
 }
 # ----------------------------------------------
 # Step #3: Trap CTRL+C, CTRL+Z and quit singles
@@ -141,7 +143,7 @@ restart() {
 # ------------------------------------
 while true
 do
-  checkPermissions
+  #checkPermissions
 
   # System setup
   choosePi
