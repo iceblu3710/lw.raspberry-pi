@@ -32,37 +32,46 @@ function backUp() {
 
 # We need sudo permissions for some things. Explain and ask for it
 checkPermissions() {
-  echo ""
   if [[ $EUID -ne 0 ]]; then
-   echo " This script must be run as root, use sudo "$0" instead" 1>&2
-   exit 1
-fi
+    whiptail --title "Warning" --msgbox \
+      "This script must be run as root, please use sudo "$0" instead." \
+      8 78
+    exit 1
+  fi
 }
 
+systemSetup() {
+  if (whiptail --title "Program Setup" --yesno \
+      "This is an example of a yes/no box."\
+       8 78) then
+    echo "User selected Yes, exit status was $?."
+  else
+    echo "User selected No, exit status was $?."
+  fi
+  whiptail --title "Check list example" --checklist \
+    "Choose user's permissions" 20 78 4 \
+    "NET_OUTBOUND" "Allow connections to other hosts" ON \
+    "NET_INBOUND" "Allow connections from other hosts" OFF \
+    "LOCAL_MOUNT" "Allow mounting of local devices" OFF \
+    "REMOTE_MOUNT" "Allow mounting of remote devices" OFF
+}
+
+
 explainAvrdude() {
-  clear
-  echo "--------------------------------------------------------------------------------"
-  echo "                            Pi CNC Hat - Avrdude"
-  echo "--------------------------------------------------------------------------------"
-  echo ""
-  echo " If you are running a CNC hat with an Arduino connected directly to the GPIO"
-  echo " then you will need to use a modified avedude script to toggle the DTR (Pin11)"
-  echo " "
-  echo " Avrdude is from:"
-  echo " http://savannah.nongnu.org/projects/avrdude/"
-  echo " Licensed under GNU GPL v2"
-  echo ""
-  echo " If you are using a CNC hat then agree, otherwise you can skip this step."
-  echo ""
-  select option in "Install" "Skip"
-  do
-    case $option in
-      "Install")
-        AVRDUDE="TRUE" && break;;
-      "Skip")
-        break;;
-     esac
-  done
+MSG="If you are running a CNC hat with an Arduino connected directly to the GPIO then you will need to use a modified avedude script to toggle the DTR (Pin11)
+  
+Avrdude is from:
+http://savannah.nongnu.org/projects/avrdude/
+Licensed under GNU GPL v2
+  
+If you are using a CNC hat then agree, otherwise you can skip this step."
+  
+  if (whiptail --title "Pi CNC Hat - Avrdude" --yesno "${MSG}" 30 78)
+  then
+    AVRDUDE="TRUE"
+  else
+    AVRDUDE="FALSE"
+  fi
 }
 
 installAvrdude() {
